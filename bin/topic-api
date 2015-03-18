@@ -1,0 +1,169 @@
+#!/usr/bin/env ruby
+
+require 'optparse'
+require 'time'
+require 'json'
+
+$:.unshift File.join(File.expand_path("..", File.dirname(__FILE__)), "lib")
+require 'koala'
+
+now_str = Time.now.strftime("%Y-%m-%dT%H:%M:%S")
+
+options = {}
+command_opts = nil
+OptionParser.new do |opts|
+  command_opts = opts
+
+  opts.banner = "Usage: #{__FILE__} [options]"
+
+  opts.on("-h", "--help", "Display this message") do |val|
+    puts opts
+    exit
+  end
+
+  opts.on("-tTOPIC", "--topic=TOPIC", "REQUIRED Topic to search for") do |val|
+    options[:topic] = val
+  end
+
+  opts.on("-sSINCE", "--since=SINCE", "REQUIRED Min datetime string (ex: #{now_str}) ") do |val|
+    options[:since] = val
+  end
+
+  opts.on("-uUNTIL", "--until=UNTIL", "REQUIRED Max datetime string (ex: #{now_str})") do |val|
+    options[:until] = val
+  end
+
+  opts.on("-bBREAKDOWN", "--breakdown-by=BREAKDOWN", "CSV list of dimensions to group by {gender,age_range,city,region,country,continent}") do |val|
+    options[:breakdown_by] = val.split(',')
+  end
+
+  opts.on("-zTZ", "--timezone=TZ", "Time zone (ex: 'America/Los_Angeles')") do |val|
+    options[:tz] = val
+  end
+
+  opts.on("-iCLIENT_ID", "--client-id=CLIENT_ID", "Facebook Client ID") do |val|
+    options[:client_id] = val
+  end
+
+  opts.on("-eCLIENT_SECRET", "--client-secret=CLIENT_SECRET", "Facebook Client Secret") do |val|
+    options[:client_secret] = val
+  end
+
+  opts.on("-oOUTFILE", "--out=OUTFILE", "Write JSON data to file") do |val|
+    options[:outfile] = val
+  end
+
+  opts.on("-fFMT", "--fmt=FMT", "{json,tsv,csv}") do |val|
+    fmt = nil
+    val = val.strip.downcase
+    if ['json', 'tsv', 'csv'].include?(val)
+      fmt = val
+    else
+      fmt = 'json'
+    end
+    options[:fmt] = fmt
+  end
+end.parse!
+
+[:topic, :since, :until].each do |flag|
+  if options[flag].nil?
+    puts "Missing required argument: #{flag}"
+    puts command_opts
+    exit 1
+  end
+end
+
+Koala.config.api_version = "v2.0"
+
+client_id = (options[:client_id] || ENV['FACEBOOK_CLIENT_ID'])
+client_secret = (options[:client_secret] || ENV['FACEBOOK_CLIENT_SECRET'])
+
+unless client_id && client_secret
+  puts "Missing client_id and/or client_secret"
+  exit 1
+end
+
+# set runtime timezone if provided
+if options[:tz]
+  ENV['TZ'] = options[:tz]
+end
+
+# init client
+oauth = Koala::Facebook::OAuth.new(client_id, client_secret)
+app_token = oauth.get_app_access_token
+client = Koala::Facebook::API.new(app_token)
+
+search_topic = options[:topic]
+search_results = client.topic_search(search_topic)
+
+if search_results.length == 0
+  puts "No topic found for #{search_topic}"
+  exit 0
+end
+
+topic = nil
+if search_results.length > 1
+  str = "More than one topic returned.  Please disambiguate:\n"
+  search_results.each_with_index do |result, idx|
+    str << "#{idx}) #{result['name']}"
+    str << "\n"
+  end
+  str << "Which topic number?"
+  puts str
+  i = STDIN.gets.chomp.to_i
+  topic = search_results[i]
+else
+  topic = search_results[0]
+end
+
+puts "Requesting with topic:"
+puts JSON.pretty_generate(topic)
+
+params = {}
+
+breakdown_by = options[:breakdown_by].to_a.sort
+start_time = Time.parse(options[:since])
+end_time = Time.parse(options[:until])
+
+topic_insights = client.topic_insights(
+  topic['id'],
+  start_time,
+  end_time,
+  :breakdown_by => breakdown_by
+)
+
+fout = nil
+
+write_fn = proc { |f, topic_insights|
+  case options[:fmt]
+  when 'tsv', 'csv'
+    require 'csv'
+    delim = options[:fmt] == 'csv' ? "," : "\t"
+    output = CSV.generate(col_sep: delim) do |csv|
+      csv << (['start_time', 'end_time'] + breakdown_by + ['count'])
+      ([topic_insights["total"]] + topic_insights["breakdown"]).each do |doc|
+        row = []
+        row << start_time.iso8601
+        row << end_time.iso8601
+        (breakdown_by + ['count']).each do |header|
+          row << doc[header].to_s
+        end
+        csv << row
+      end
+    end
+    f.puts output
+  else
+    f.puts JSON.pretty_generate(topic_insights)
+  end
+}
+
+if !(options[:outfile].nil?)
+  File.open(options[:outfile], "w") do |f|
+    write_fn.call(f, topic_insights)
+  end
+  puts "Ouput written to: #{options[:outfile]}"
+else
+  write_fn.call($stdout, topic_insights)
+end
+
+
