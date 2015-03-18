@@ -1,6 +1,7 @@
 # graph_batch_api and legacy are required at the bottom, since they depend on API being defined
 require 'koala/api/graph_api'
 require 'koala/api/rest_api'
+require 'koala/api/topic_api'
 require 'openssl'
 
 module Koala
@@ -24,6 +25,7 @@ module Koala
 
       include GraphAPIMethods
       include RestAPIMethods
+      include TopicAPIMethods
 
       # Makes a request to the appropriate Facebook API.
       # @note You'll rarely need to call this method directly.
