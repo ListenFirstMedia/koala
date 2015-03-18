@@ -1,4 +1,5 @@
 require 'koala/api/graph_api'
+require 'base64'
 
 module Koala
   module Facebook
@@ -72,8 +73,6 @@ module Koala
         # initial max time of start + chunk, or full request time window (whichever is smaller)
         max_time = [(start_time + chunk), until_time].min
 
-        breakdown_key_delim = '|'
-
         # do requests while more chunks
         while min_time < max_time
           # update since and until request parameters
@@ -98,7 +97,8 @@ module Koala
               # insight => {"age_range"=>"13-17", "count"=>"180", "gender"=>"male"}
               # generate a set key composed of all breakdown values that this "count" is grouped by
               # ex: "13-17|male"
-              breakdown_key = opts[:breakdown_by].map { |k| insight[k] }.join(breakdown_key_delim)
+              breakdown_values = opts[:breakdown_by].map{|k| insight[k]}
+              breakdown_key = Base64.encode64(Marshal.dump(breakdown_values)).chomp
               # add to existing total for this breakdown grouping
               breakdown_map[breakdown_key] ||= 0
               breakdown_map[breakdown_key] += insight["count"].to_i
@@ -119,8 +119,8 @@ module Koala
         # ex: {"age_range" => "13-17", "gender" => "male", count => <sum of chunked counts>}
         breakdown_map.each do |breakdown_key, ct|
           breakdown_entry = {}
-          # split breakdown values out of breakdown_key
-          breakdown_parts = breakdown_key.split(breakdown_key_delim, -1)
+          # load breakdown values out of breakdown_key
+          breakdown_parts = Marshal.load(Base64.decode64(breakdown_key))
           breakdown_parts.each_with_index do |breakdown_value, idx|
             if breakdown_value.to_s.length > 0
               # set breakdown value for breakdown key for this entry
