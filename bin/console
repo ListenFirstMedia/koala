@@ -1,0 +1,20 @@
+#!/usr/bin/env ruby
+
+# load koala library components
+$:.unshift File.join(File.expand_path("..", File.dirname(__FILE__)), "lib")
+require 'koala'
+
+# get client auth from env
+client_id = ENV['FACEBOOK_CLIENT_ID']
+client_secret = ENV['FACEBOOK_CLIENT_SECRET']
+
+@client = nil
+if client_id && client_secret
+  # init client
+  oauth = Koala::Facebook::OAuth.new(client_id, client_secret)
+  app_token = oauth.get_app_access_token
+  @client = Koala::Facebook::API.new(app_token)
+end
+
+require 'irb'
+IRB.start
