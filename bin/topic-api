@@ -105,7 +105,7 @@ topic = nil
 if search_results.length > 1
   str = "More than one topic returned.  Please disambiguate:\n"
   search_results.each_with_index do |result, idx|
-    str << "#{idx}) #{result['name']}"
+    str << "#{idx}) #{result['name']} (#{result['page']})"
     str << "\n"
   end
   str << "Which topic number?"
@@ -140,11 +140,13 @@ write_fn = proc { |f, topic_insights|
     require 'csv'
     delim = options[:fmt] == 'csv' ? "," : "\t"
     output = CSV.generate(col_sep: delim) do |csv|
-      csv << (['start_time', 'end_time'] + breakdown_by + ['count'])
+      csv << (['start_time', 'end_time', 'topic_category', 'topic_page'] + breakdown_by + ['count'])
       ([topic_insights["total"]] + topic_insights["breakdown"]).each do |doc|
         row = []
         row << start_time.iso8601
         row << end_time.iso8601
+        row << topic['page']['category']
+        row << "http://www.facebook.com/#{topic['page']['id']}"
         (breakdown_by + ['count']).each do |header|
           row << doc[header].to_s
         end
