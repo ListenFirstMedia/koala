@@ -4,6 +4,11 @@
 $:.unshift File.join(File.expand_path("..", File.dirname(__FILE__)), "lib")
 require 'koala'
 
+require 'time'
+require 'json'
+
+Koala.config.api_version = "v2.0"
+
 # get client auth from env
 client_id = ENV['FACEBOOK_CLIENT_ID']
 client_secret = ENV['FACEBOOK_CLIENT_SECRET']
