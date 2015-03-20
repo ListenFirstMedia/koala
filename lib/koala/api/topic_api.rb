@@ -137,6 +137,21 @@ module Koala
         topic_insights
       end
 
+      # TODO add documentation
+      def topic_feed(topic_id, opts={})
+        opts ||= {}
+        fields = "id,name,page,ranked_posts"
+        post_fields = opts.delete(:fields)
+        if post_fields && post_fields.length > 0
+          fields = "#{fields}.fields(#{post_fields})"
+        end
+        params = {
+          fields: fields,
+          limit: 10000
+        }
+        get_object(topic_id, params)
+      end
+
     end
 
   end
