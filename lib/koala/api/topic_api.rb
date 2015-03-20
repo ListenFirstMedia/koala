@@ -147,7 +147,6 @@ module Koala
         end
         params = {
           fields: fields,
-          limit: 10000
         }
         get_object(topic_id, params)
       end

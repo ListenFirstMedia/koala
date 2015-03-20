@@ -51,7 +51,7 @@ OptionParser.new do |opts|
     options[:client_secret] = val
   end
 
-  opts.on("-OUTDIR", "--out=OUTDIR", "Write data to this directory") do |val|
+  opts.on("-oOUTDIR", "--out=OUTDIR", "Write data to this directory") do |val|
     options[:outdir] = val
   end
 
