@@ -24,7 +24,7 @@ module Koala
       # counts are aggregated to the requested time window with respect to both the total
       # and full breakdowns requested
       #
-      # @param topic_id [String] Facebook topic ID (use `search`)
+      # @param topic_id [String] Facebook topic ID (use `topic_search`)
       # @param start_time [Time] Window start (inclusive)
       # @param end_time [Time] Window end (exclusive)
       # @param opts Options
@@ -32,7 +32,7 @@ module Koala
       # @raise [Koala::Facebook::APIError] if missing topic_id or rate limited
       # @return TODO
       #
-      def topic_insights(topic_id, start_time, end_time, opts={})
+      def topic_counts(topic_id, start_time, end_time, opts={})
         opts ||= {}
 
         # TODO what structure to return?
