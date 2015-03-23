@@ -31,7 +31,8 @@ module Koala
       # @param opts Options
       #   @option opts :breakdown_by [Array<String>] Dimensions to break down mention counts by
       # @raise [Koala::Facebook::APIError] if missing topic_id or rate limited
-      # @return TODO
+      # @return [Array<Hash>]
+      # => [{"count": 101, "breakdown": {"count": 14, "country": "US", "gender": "male"}, {...}]
       #
       def topic_counts(topic_ids, start_time, end_time, opts={})
         opts ||= {}
