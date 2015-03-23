@@ -5,17 +5,6 @@ module Koala
   module Facebook
 
     module TopicAPIMethods
-      # https://developers.facebook.com/docs/topic_search
-      # Search for a Topic Entity.
-      #
-      # @param name [String] the query term
-      # @raise [Koala::Facebook::APIError] if the name is blank
-      # @return [Array<Hash>] array of topic hashes that were found by this search query
-      #
-      def topic_search(name)
-        search(name, {type: 'topic', fields: 'id,name,page'})
-      end
-
       # https://developers.facebook.com/docs/topic_insights
       # Fetch mention counts for a list of topics.
       #
@@ -143,18 +132,6 @@ module Koala
         end
 
         counts
-      end
-
-      # https://developers.facebook.com/docs/topic_feed
-      # Fetch a ranked feed of public posts for a specific topic
-      #
-      # @param topic_id String The Topic ID to get posts for
-      # @param opts Hash request options
-      #   @option opts :fields [String, Array<String>] fields to return for each post in the feed
-      # @return [Koala::Facebook::API::GraphCollection]
-      #
-      def topic_feed(topic_id, opts={})
-        get_connection(topic_id, 'ranked_posts', opts)
       end
 
     end
