@@ -11,15 +11,7 @@ module Koala
         opts ||= {}
         hashtags = [hashtags].flatten
 
-        # TODO what structure to return?
-        # TODO taken loosely from topic counts call
-        # update that to return array structure
-        hashtag_counts = []
-        # hashtag_counts = {
-        #   "total" => {
-        #     "count" => nil
-        #   }
-        # }
+        counts = []
 
         # TODO API enforces times "line up evenly on 300 second intervals"
         # valid: 13:00:00, 13:05:00, 13:10:00, ...
@@ -57,11 +49,11 @@ module Koala
             # if entity_id.length > 0
             #   doc["id"] = Base64.encode64("topic_#{entity_id}").chomp
             # end
-            hashtag_counts << doc
+            counts << doc
           end
         end
 
-        hashtag_counts
+        counts
       end
 
     end

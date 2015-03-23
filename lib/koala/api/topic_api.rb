@@ -36,6 +36,8 @@ module Koala
         opts ||= {}
         topic_ids = [topic_ids].flatten
 
+        counts = []
+
         # map for aggregating fully broken down counts across request chunks
         breakdown_map = {}
 
@@ -134,7 +136,11 @@ module Koala
           topic_insight["breakdown"] << breakdown_entry
         end
 
-        [topic_insight]
+        if topic_insight
+          counts << topic_insight
+        end
+
+        counts
       end
 
       # TODO add documentation
