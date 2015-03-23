@@ -127,7 +127,7 @@ breakdown_by = options[:breakdown_by].to_a.sort
 start_time = Time.parse(options[:since])
 end_time = Time.parse(options[:until])
 
-topic_insights = client.topic_counts(
+topic_counts = client.topic_counts(
   topic['id'],
   start_time,
   end_time,
@@ -136,28 +136,43 @@ topic_insights = client.topic_counts(
 
 fout = nil
 
-write_fn = proc { |f, topic_insights|
+write_fn = proc { |f, topic_counts|
   case options[:fmt]
   when 'tsv', 'csv'
     delim = options[:fmt] == 'csv' ? "," : "\t"
     output = CSV.generate(col_sep: delim) do |csv|
       csv << (['start_time', 'end_time', 'topic_name', 'topic_category', 'topic_page'] + breakdown_by + ['count'])
-      ([topic_insights["total"]] + topic_insights["breakdown"]).each do |doc|
+
+      # base output row
+      base_row = [
+        start_time.iso8601,
+        end_time.iso8601,
+        topic['name'],
+        (topic['page']['category'] rescue nil),
+        ("http://www.facebook.com/#{topic['page']['id']}" rescue nil)
+      ]
+
+      topic_counts.each do |topic_doc|
+        # 1 row for total count
         row = []
-        row << start_time.iso8601
-        row << end_time.iso8601
-        row << topic['name']
-        row << (topic['page']['category'] rescue nil)
-        row << ("http://www.facebook.com/#{topic['page']['id']}" rescue nil)
-        (breakdown_by + ['count']).each do |header|
-          row << doc[header].to_s
+        breakdown_by.length.times { row << "" }
+        row << topic_doc['count']
+        csv << (base_row + row)
+
+        # 1 row per breakdown grouping
+        topic_doc['breakdown'].each do |breakdown_doc|
+          row = []
+          breakdown_by.each do |header|
+            row << breakdown_doc[header]
+          end
+          row << breakdown_doc['count']
+          csv << (base_row + row)
         end
-        csv << row
       end
     end
     f.puts output
   else
-    f.puts JSON.pretty_generate(topic_insights)
+    f.puts JSON.pretty_generate(topic_counts)
   end
 }
 
@@ -168,11 +183,11 @@ if !(options[:outdir].nil?)
   fname = CGI::escape("#{topic_part}.#{s}.#{e}.#{options[:fmt]}")
   full_path = File.expand_path(File.join(options[:outdir], fname))
   File.open(full_path, "w") do |f|
-    write_fn.call(f, topic_insights)
+    write_fn.call(f, topic_counts)
   end
   puts "Ouput written to: #{full_path}"
 else
-  write_fn.call($stdout, topic_insights)
+  write_fn.call($stdout, topic_counts)
 end
 
 
