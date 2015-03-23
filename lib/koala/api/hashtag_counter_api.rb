@@ -5,7 +5,16 @@ module Koala
 
     module HashtagCounterAPIMethods
 
-      # TODO doc
+      # https://developers.facebook.com/docs/hashtag_counter
+      # Return counts for a list of hashtags within a time window
+      #
+      # @param hashtags [Array<String>] array of hashtags without the leading '#'
+      # @param start_time [Time] Window start (inclusive)
+      # @param end_time [Time] Window end (exclusive)
+      # @param opts Options
+      # @return [Array<Hash>]
+      # => [{"count": 101, "name", "#Hashtag"}, {...}]
+      #
       def hashtag_counts(hashtags, start_time, end_time, opts={})
         # NOTE: currently not used. offering same api as topic_counts
         opts ||= {}
@@ -21,10 +30,9 @@ module Koala
 
         # NOTE: lib currently encodes array values into comma separated strings
         # however, this api endpoint needs arg "hashtags[]" in url query string
-        # including here as part of the path with times being included in params arg
+        # including here as part of the path with time args being included in params arg
         # (added to query string by library)
         params = {
-          # "hashtags[]" => [...],
           "since" => start_ts,
           "until" => end_ts
         }
