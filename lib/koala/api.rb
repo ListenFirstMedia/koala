@@ -2,6 +2,7 @@
 require 'koala/api/graph_api'
 require 'koala/api/rest_api'
 require 'koala/api/topic_api'
+require 'koala/api/hashtag_counter_api'
 require 'openssl'
 
 module Koala
@@ -26,6 +27,7 @@ module Koala
       include GraphAPIMethods
       include RestAPIMethods
       include TopicAPIMethods
+      include HashtagCounterAPIMethods
 
       # Makes a request to the appropriate Facebook API.
       # @note You'll rarely need to call this method directly.
