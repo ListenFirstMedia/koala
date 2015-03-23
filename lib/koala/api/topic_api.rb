@@ -5,6 +5,7 @@ module Koala
   module Facebook
 
     module TopicAPIMethods
+      # https://developers.facebook.com/docs/topic_search
       # Search for a Topic Entity.
       #
       # @param name [String] the query term
@@ -16,15 +17,15 @@ module Koala
       end
 
       # https://developers.facebook.com/docs/topic_insights
+      # Fetch mention counts for a list of topics.
       #
-      # Fetch mention counts for a single topic ID.
       # Current Facebook API limit of total time frame <= 21600 seconds
       # This method accepts a total time frame that spans greater than API limit
       # and internally chunks api requests using maximum allowed chunk
       # counts are aggregated to the requested time window with respect to both the total
       # and full breakdowns requested
       #
-      # @param topic_id [String] Facebook topic ID (use `topic_search`)
+      # @param topic_ids [String, Array<String>] Facebook Topic IDs (use `topic_search`)
       # @param start_time [Time] Window start (inclusive)
       # @param end_time [Time] Window end (exclusive)
       # @param opts Options
@@ -143,18 +144,16 @@ module Koala
         counts
       end
 
-      # TODO add documentation
+      # https://developers.facebook.com/docs/topic_feed
+      # Fetch a ranked feed of public posts for a specific topic
+      #
+      # @param topic_id String The Topic ID to get posts for
+      # @param opts Hash request options
+      #   @option opts :fields [String, Array<String>] fields to return for each post in the feed
+      # @return [Koala::Facebook::API::GraphCollection]
+      #
       def topic_feed(topic_id, opts={})
-        opts ||= {}
-        fields = "id,name,page,ranked_posts"
-        post_fields = opts.delete(:fields)
-        if post_fields && post_fields.length > 0
-          fields = "#{fields}.fields(#{post_fields})"
-        end
-        params = {
-          fields: fields,
-        }
-        get_object(topic_id, params)
+        get_connection(topic_id, 'ranked_posts', opts)
       end
 
     end
