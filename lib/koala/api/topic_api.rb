@@ -32,23 +32,20 @@ module Koala
       # @raise [Koala::Facebook::APIError] if missing topic_id or rate limited
       # @return TODO
       #
-      def topic_counts(topic_id, start_time, end_time, opts={})
+      def topic_counts(topic_ids, start_time, end_time, opts={})
         opts ||= {}
-
-        # TODO what structure to return?
-        topic_insights = {
-          "total" => {
-            "count" => nil
-          },
-          "breakdown" => []
-        }
+        topic_ids = [topic_ids].flatten
 
         # map for aggregating fully broken down counts across request chunks
         breakdown_map = {}
 
+        # url encode each argument as part of query string params
+        topics_query_str = topic_ids.map do |arg|
+          "contains_all[]=#{CGI::escape(arg)}"
+        end.join('&')
+
         # API request parameters
         request_params = {
-          "contains_all[]" => topic_id,
           "fields" => "mentions"
         }
 
@@ -73,6 +70,7 @@ module Koala
         # initial max time of start + chunk, or full request time window (whichever is smaller)
         max_time = [(start_time + chunk), until_time].min
 
+        topic_insight = nil
         # do requests while more chunks
         while min_time < max_time
           # update since and until request parameters
@@ -80,28 +78,29 @@ module Koala
             "#{request_params['fields']}.since(#{min_time.to_i}).until(#{max_time.to_i})"
 
           # make request for this chunk of mentions counts
-          insights_res = get_object('topic_insights', request_params)
+          get_object("topic_insights?#{topics_query_str}", request_params, {}) do |topics_res|
+            arr_mentions_data = (topics_res[0]['mentions']['data'] rescue [])
+            if arr_mentions_data.length > 0
+              # pop the "totals" for the time period
+              chunk_total = arr_mentions_data.shift
 
-          # TODO better error handling?
-          arr_mentions_data = (insights_res[0]['mentions']['data'] rescue [])
-          if arr_mentions_data.length > 0
-            # pop the "totals" for the time period
-            chunk_total = arr_mentions_data.shift
+              # add this chunk's total count to totals count
+              topic_insight ||= {
+                "count" => 0,
+              }
+              topic_insight["count"] += (chunk_total && chunk_total['count']).to_i
 
-            # add this chunk's total count to totals count
-            topic_insights["total"]["count"] ||= 0
-            topic_insights["total"]["count"] += (chunk_total && chunk_total['count']).to_i
-
-            # iterate breakdowns
-            arr_mentions_data.each do |insight|
-              # insight => {"age_range"=>"13-17", "count"=>"180", "gender"=>"male"}
-              # generate a set key composed of all breakdown values that this "count" is grouped by
-              # ex: "13-17|male"
-              breakdown_values = opts[:breakdown_by].map{|k| insight[k]}
-              breakdown_key = Base64.encode64(Marshal.dump(breakdown_values)).chomp
-              # add to existing total for this breakdown grouping
-              breakdown_map[breakdown_key] ||= 0
-              breakdown_map[breakdown_key] += insight["count"].to_i
+              # iterate breakdowns
+              arr_mentions_data.each do |insight|
+                # insight => {"age_range"=>"13-17", "count"=>"180", "gender"=>"male"}
+                # generate a set key composed of all breakdown values that this "count" is grouped by
+                # ex: "13-17|male"
+                breakdown_values = opts[:breakdown_by].map{|k| insight[k]}
+                breakdown_key = Base64.encode64(Marshal.dump(breakdown_values)).chomp
+                # add to existing total for this breakdown grouping
+                breakdown_map[breakdown_key] ||= 0
+                breakdown_map[breakdown_key] += insight["count"].to_i
+              end
             end
           end
 
@@ -131,10 +130,11 @@ module Koala
           # set broken down count aggregated over request time window
           breakdown_entry["count"] = ct
           # add to response structure
-          topic_insights["breakdown"] << breakdown_entry
+          topic_insight["breakdown"] ||= []
+          topic_insight["breakdown"] << breakdown_entry
         end
 
-        topic_insights
+        [topic_insight]
       end
 
       # TODO add documentation

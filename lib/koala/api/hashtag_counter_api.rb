@@ -49,10 +49,15 @@ module Koala
           # [{"count"=>"2147", "hashtag"=>{"id"=>"351255261652168", "name"=>"#MLB"}}, ...]
           hashtags_res.each do |hashtag_doc|
             # add to return structure
-            hashtag_counts << {
+            doc = {
               "name" => (hashtag_doc['hashtag'] && hashtag_doc['hashtag']['name']).to_s,
               "count" => hashtag_doc['count'].to_i
             }
+            # entity_id = (hashtag_doc['hashtag'] && hashtag_doc['hashtag']['id']).to_s
+            # if entity_id.length > 0
+            #   doc["id"] = Base64.encode64("topic_#{entity_id}").chomp
+            # end
+            hashtag_counts << doc
           end
         end
 
