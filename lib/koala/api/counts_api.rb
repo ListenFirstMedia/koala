@@ -7,9 +7,19 @@ module Koala
 
     module CountsAPIMethods
 
-      # takes array of strings, each being either a topic id or a raw hashtag (with leading '#')
-      # delegates to api method, returns merged result
-      # TODO better name
+      # Return topic counts across API endpoints
+      # This method accepts either raw hashtag queries as well as Topic Ids
+      # and delegates to proper API endpoint for fetching data
+      #
+      # @param ids [Array<String>] array of hashtags or Topic Ids (ok to mix)
+      # see `topic_insights`
+      #
+      # @return Array<Hash>
+      # [
+      #   {"query":"#mlb", "name":"#MLB", "count": 123, "breakdown": []},
+      #   {"query":"mlb", "name":"MLB", "count": 450, "breakdown": ["gender":"male", "count": 101]}
+      # ]
+      #
       def topic_counts(ids, start_time, end_time, opts={})
         ids = [ids].flatten
         hashtags, topic_ids = ids.partition { |id| Koala::Utils::is_hashtag?(id) }
@@ -32,7 +42,7 @@ module Koala
       # @param opts Options
       #   @option opts :breakdown_by [Array<String>] Dimensions to break down mention counts by
       # @raise [Koala::Facebook::APIError] if missing topic_id or rate limited
-      # @return TODO
+      # @return see `topic_counts`
       #
       def topic_insights(topic_ids, start_time, end_time, opts={})
         return [] unless (topic_ids && topic_ids.length > 0)
@@ -158,7 +168,7 @@ module Koala
       # @param start_time [Time] Window start (inclusive)
       # @param end_time [Time] Window end (exclusive)
       # @param opts Options
-      # @return TODO
+      # @return see `topic_counts`
       #
       def hashtag_counts(hashtags, start_time, end_time, opts={})
         return [] unless (hashtags && hashtags.length > 0)
