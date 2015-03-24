@@ -127,7 +127,7 @@ breakdown_by = options[:breakdown_by].to_a.sort
 start_time = Time.parse(options[:since])
 end_time = Time.parse(options[:until])
 
-topic_counts = client.topic_counts(
+topic_counts = client.topic_insights(
   topic['id'],
   start_time,
   end_time,
