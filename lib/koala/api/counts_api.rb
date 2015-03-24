@@ -5,6 +5,19 @@ module Koala
   module Facebook
 
     module CountsAPIMethods
+
+      # takes array of strings, each being either a topic id or a raw hashtag (with leading '#')
+      # delegates to api method, returns merged result
+      # TODO better name
+      def topic_counts(ids, start_time, end_time, opts={})
+        hashtags, topic_ids = ids.partition { |id| is_hashtag?(id) }
+
+        hashtag_counts_map = hashtag_counts(hashtags, start_time, end_time, opts)
+        topic_counts_map = topic_insights(topic_ids, start_time, end_time, opts)
+
+        hashtag_counts(hashtags, start_time, end_time, opts).merge(topic_insights(topic_ids, start_time, end_time, opts))
+      end
+
       # https://developers.facebook.com/docs/topic_insights
       # Fetch mention counts for a list of topics.
       #
@@ -23,6 +36,7 @@ module Koala
       # @return TODO
       #
       def topic_insights(topic_ids, start_time, end_time, opts={})
+        return {} unless (topic_ids && topic_ids.length > 0)
         opts ||= {}
         topic_ids = [topic_ids].flatten
 
@@ -140,6 +154,7 @@ module Koala
       # @return TODO
       #
       def hashtag_counts(hashtags, start_time, end_time, opts={})
+        return {} unless (hashtags && hashtags.length > 0)
         # NOTE: currently not used. offering same api as topic_counts
         opts ||= {}
         hashtags = [hashtags].flatten
@@ -205,6 +220,11 @@ module Koala
       end
 
       private
+      # TODO anything else to check for?
+      def is_hashtag?(arg)
+        !!(arg && arg.start_with?('#'))
+      end
+
       # to lower case, remove 1 leading '#'
       def normalize_hashtag(htag)
         strip_leading_tag(htag).downcase
@@ -213,6 +233,7 @@ module Koala
       def strip_leading_tag(htag)
         htag.gsub(/^\#{1}/,'')
       end
+
     end
 
   end
