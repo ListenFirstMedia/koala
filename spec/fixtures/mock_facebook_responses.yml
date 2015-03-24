@@ -291,6 +291,31 @@ graph_api:
         with_token: '[{"name":"query1", "fql_result_set":[{"uid":2901279,"first_name":"Luke"}]},{"name":"query2", "fql_result_set":[{"uid":"2905623","first_name":"Alex"}]}]'
         no_token: '[{"name":"query1", "fql_result_set":[{"uid":2901279,"first_name":"Luke"}]},{"name":"query2", "fql_result_set":[{"uid":"2905623","first_name":"Alex"}]}]'
 
+  /hashtag_counts?hashtags[]=facebook:
+    since=1427130300&until=1427166300:
+      get:
+        <<: *token_required
+        with_token: '{"data":[{"count":"2","hashtag":{"id":"1","name":"#Facebook"}}]}'
+
+  /topic_insights?contains_all[]=1:
+    fields=topics,mentions.breakdown_by(["gender"]).since(1427130300).until(1427151900):
+      get:
+        <<: *token_required
+        with_token: '{"data":[{"mentions":{"data":[{"count":"2"}, {"count":"1","gender":"male"},{"count":"1","gender":"female"}]},"topics":{"data":[{"id":"1","name":"Facebook"}]}}]}'
+    fields=topics,mentions.breakdown_by(["gender"]).since(1427151900).until(1427166300):
+      get:
+        <<: *token_required
+        with_token: '{"data":[{"mentions":{"data":[{"count":"4"}, {"count":"1","gender":"male"},{"count":"3","gender":"female"}]},"topics":{"data":[{"id":"1","name":"Facebook"}]}}]}'
+
+  /topic_insights?contains_all[]=2:
+    fields=topics,mentions.breakdown_by(["gender"]).since(1427130300).until(1427151900):
+      get:
+        <<: *token_required
+        with_token: '{"data":[{"mentions":{"data":[{"count":"6"}]},"topics":{"data":[{"id":"2","name":"Koala"}]}}]}'
+    fields=topics,mentions.breakdown_by(["gender"]).since(1427151900).until(1427166300):
+      get:
+        <<: *token_required
+        with_token: '{"data":[{"mentions":{"data":[{"count":"8"}]},"topics":{"data":[{"id":"2","name":"Koala"}]}}]}'
 
   '/115349521819193_113815981982767':
     no_args:

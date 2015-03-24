@@ -1,13 +1,7 @@
 require 'spec_helper'
 
 describe 'Koala::Facebook::GraphAPIMethods' do
-  before do
-    @api = Koala::Facebook::API.new(@token)
-    # app API
-    @app_id = KoalaTest.app_id
-    @app_access_token = KoalaTest.app_access_token
-    @app_api = Koala::Facebook::API.new(@app_access_token)
-  end
+  include_context "Koala Graph API setup"
 
   describe 'post-processing for' do
     let(:result) { double("result") }

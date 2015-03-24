@@ -52,16 +52,6 @@ module Koala
 
         counts_arr = []
 
-        # API request parameters
-        request_params = {
-          "fields" => "topics,mentions"
-        }
-        # update fields with breakdown_by argument if provided
-        if !(opts[:breakdown_by].nil?) && opts[:breakdown_by].length > 0
-          request_params["fields"] =
-            "#{request_params["fields"]}.breakdown_by(#{opts[:breakdown_by].to_s})"
-        end
-
         # keep referance request max time
         until_time = end_time
         # TODO max chunk size given current API constraints
@@ -86,6 +76,15 @@ module Koala
           topic_insight = nil
           # do requests while more chunks
           while min_time < max_time
+            # API request parameters
+            request_params = {
+              "fields" => "topics,mentions"
+            }
+            # update fields with breakdown_by argument if provided
+            if !(opts[:breakdown_by].nil?) && opts[:breakdown_by].length > 0
+              request_params["fields"] =
+                "#{request_params["fields"]}.breakdown_by(#{opts[:breakdown_by].to_s})"
+            end
             # update since and until request parameters
             request_params['fields'] =
               "#{request_params['fields']}.since(#{min_time.to_i}).until(#{max_time.to_i})"

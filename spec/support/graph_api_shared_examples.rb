@@ -654,3 +654,13 @@ shared_examples_for "Koala GraphAPI without an access token" do
     end
   end
 end
+
+shared_context "Koala Graph API setup" do
+  before do
+    @api = Koala::Facebook::API.new(@token)
+    # app API
+    @app_id = KoalaTest.app_id
+    @app_access_token = KoalaTest.app_access_token
+    @app_api = Koala::Facebook::API.new(@app_access_token)
+  end
+end
