@@ -1,4 +1,5 @@
 require 'koala/api/graph_api'
+require 'koala/utils'
 require 'base64'
 
 module Koala
@@ -11,7 +12,7 @@ module Koala
       # TODO better name
       def topic_counts(ids, start_time, end_time, opts={})
         ids = [ids].flatten
-        hashtags, topic_ids = ids.partition { |id| is_hashtag?(id) }
+        hashtags, topic_ids = ids.partition { |id| Koala::Utils::is_hashtag?(id) }
         hashtag_counts(hashtags, start_time, end_time, opts) +
         topic_insights(topic_ids, start_time, end_time, opts)
       end
@@ -228,10 +229,6 @@ module Koala
       end
 
       private
-      # TODO anything else to check for?
-      def is_hashtag?(arg)
-        !!(arg && arg.start_with?('#'))
-      end
 
       # to lower case, remove 1 leading '#'
       def normalize_hashtag(htag)
