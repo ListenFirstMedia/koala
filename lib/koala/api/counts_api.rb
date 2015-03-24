@@ -17,7 +17,8 @@ module Koala
       # @return Array<Hash>
       # [
       #   {"query":"#mlb", "name":"#MLB", "count": 123, "breakdown": []},
-      #   {"query":"mlb", "name":"MLB", "count": 450, "breakdown": ["gender":"male", "count": 101]}
+      #   {"query":"mlb", "name":"MLB", "count": 450,
+      #     "breakdown": [{"gender":"male", "count": 101}, {...}]}
       # ]
       #
       def topic_counts(ids, start_time, end_time, opts={})
