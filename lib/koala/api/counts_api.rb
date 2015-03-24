@@ -12,12 +12,10 @@ module Koala
       # delegates to api method, returns merged result
       # TODO better name
       def topic_counts(ids, start_time, end_time, opts={})
+        ids = [ids].flatten
         hashtags, topic_ids = ids.partition { |id| is_hashtag?(id) }
-
-        hashtag_counts_map = hashtag_counts(hashtags, start_time, end_time, opts)
-        topic_counts_map = topic_insights(topic_ids, start_time, end_time, opts)
-
-        hashtag_counts(hashtags, start_time, end_time, opts).merge(topic_insights(topic_ids, start_time, end_time, opts))
+        hashtag_counts(hashtags, start_time, end_time, opts) +
+        topic_insights(topic_ids, start_time, end_time, opts)
       end
 
       # https://developers.facebook.com/docs/topic_insights
@@ -38,11 +36,11 @@ module Koala
       # @return TODO
       #
       def topic_insights(topic_ids, start_time, end_time, opts={})
-        return {} unless (topic_ids && topic_ids.length > 0)
+        return [] unless (topic_ids && topic_ids.length > 0)
         opts ||= {}
         topic_ids = [topic_ids].flatten
 
-        counts_map = {}
+        counts_arr = []
 
         # API request parameters
         request_params = {
@@ -95,6 +93,7 @@ module Koala
 
                     # add this chunk's total count to totals count
                     topic_insight ||= {
+                      "query" => topic_id,
                       "name" => topic_info["name"],
                       "count" => 0,
                       "breakdown" => []
@@ -146,11 +145,11 @@ module Koala
           end
 
           if topic_insight
-            counts_map[topic_id] = topic_insight
+            counts_arr << topic_insight
           end
         end
 
-        counts_map
+        counts_arr
       end
 
       # https://developers.facebook.com/docs/hashtag_counter
@@ -163,7 +162,7 @@ module Koala
       # @return TODO
       #
       def hashtag_counts(hashtags, start_time, end_time, opts={})
-        return {} unless (hashtags && hashtags.length > 0)
+        return [] unless (hashtags && hashtags.length > 0)
         # NOTE: currently not used. offering same api as topic_counts
         opts ||= {}
         hashtags = [hashtags].flatten
@@ -181,7 +180,7 @@ module Koala
         # key: hashtag (as requested by caller i.e. "#abc")
         # value: {"name": "#ABC", "count": 123}
         # {"#abc" => {"name": "#ABC", "count": 123}}
-        counts_map = {}
+        counts_arr = []
 
         # TODO API enforces times "line up evenly on 300 second intervals"
         # valid: 13:00:00, 13:05:00, 13:10:00, ...
@@ -214,7 +213,8 @@ module Koala
             # normalize returned hashtag and map it back to requested hashtag
             htag = hashtags_args_map[normalize_hashtag(htag_name)]
             # add to return structure
-            counts_map[htag] = {
+            counts_arr << {
+              "query" => htag,
               "name" => htag_name,
               "count" => hashtag_doc['count'].to_i,
               "breakdown" => []
@@ -226,7 +226,7 @@ module Koala
           end
         end
 
-        counts_map
+        counts_arr
       end
 
       private
