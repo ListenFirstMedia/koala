@@ -23,7 +23,7 @@ OptionParser.new do |opts|
     exit
   end
 
-  opts.on("-tTOPIC", "--topic=TOPIC", "REQUIRED Topic to search for") do |val|
+  opts.on("-tTOPIC", "--topic=TOPIC", "REQUIRED Topic or Hashtag to search for") do |val|
     options[:topic] = val
   end
 
@@ -96,27 +96,34 @@ app_token = oauth.get_app_access_token
 client = Koala::Facebook::API.new(app_token)
 
 search_topic = options[:topic]
-search_results = client.search(search_topic, type: 'topic', fields: "id,name,page")
-
-if search_results.length == 0
-  puts "No topic found for #{search_topic}"
-  exit 0
-end
-
 topic = nil
-if search_results.length > 1
-  str = "More than one topic returned.  Please disambiguate:\n"
-  search_results.each_with_index do |result, idx|
-    str << "#{idx}) #{result['name']} (#{result['page']})"
-    str << "\n"
+is_htag = Koala::Utils::is_hashtag?(search_topic)
+if !is_htag
+  search_results = client.search(search_topic, type: 'topic', fields: "id,name,page")
+  if search_results.length == 0
+    puts "No topic found for #{search_topic}"
+    exit 0
   end
-  str << "Which topic number?"
-  puts str
-  i = STDIN.gets.chomp.to_i
-  topic = search_results[i]
+
+  if search_results.length > 1
+    str = "More than one topic returned.  Please disambiguate:\n"
+    search_results.each_with_index do |result, idx|
+      str << "#{idx}) #{result['name']} (#{result['page']})"
+      str << "\n"
+    end
+    str << "Which topic number?"
+    puts str
+    i = STDIN.gets.chomp.to_i
+    topic = search_results[i]
+  else
+    topic = search_results[0]
+  end
 else
-  topic = search_results[0]
+  topic = {
+    "id" => search_topic
+  }
 end
+
 
 puts "Requesting with topic:"
 puts JSON.pretty_generate(topic)
@@ -141,20 +148,18 @@ write_fn = proc { |f, topic_counts|
   when 'tsv', 'csv'
     delim = options[:fmt] == 'csv' ? "," : "\t"
     output = CSV.generate(col_sep: delim) do |csv|
-      csv << (['start_time', 'end_time', 'topic_name', 'topic_category', 'topic_page'] + breakdown_by + ['count'])
+      csv << (['start_time', 'end_time', 'topic_name'] + breakdown_by + ['count'])
 
       # base output row
       base_row = [
         start_time.iso8601,
         end_time.iso8601,
-        topic['name'],
-        (topic['page']['category'] rescue nil),
-        ("http://www.facebook.com/#{topic['page']['id']}" rescue nil)
       ]
 
       topic_counts.each do |topic_doc|
         # 1 row for total count
         row = []
+        row << topic_doc['name']
         breakdown_by.length.times { row << "" }
         row << topic_doc['count']
         csv << (base_row + row)
