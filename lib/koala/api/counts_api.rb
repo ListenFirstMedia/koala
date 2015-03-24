@@ -6,6 +6,8 @@ module Koala
 
     module CountsAPIMethods
 
+      # TODO return array with "query" attribute from argument
+
       # takes array of strings, each being either a topic id or a raw hashtag (with leading '#')
       # delegates to api method, returns merged result
       # TODO better name
@@ -44,7 +46,7 @@ module Koala
 
         # API request parameters
         request_params = {
-          "fields" => "mentions"
+          "fields" => "topics,mentions"
         }
         # update fields with breakdown_by argument if provided
         if !(opts[:breakdown_by].nil?) && opts[:breakdown_by].length > 0
@@ -82,27 +84,35 @@ module Koala
 
             # make request for this chunk of mentions counts
             get_object("topic_insights?#{topics_query_str}", request_params, {}) do |topics_res|
-              arr_mentions_data = (topics_res[0]['mentions']['data'] rescue [])
-              if arr_mentions_data.length > 0
-                # pop the "totals" for the time period
-                chunk_total = arr_mentions_data.shift
+              topics_res.each do |topic_res|
+                if topic_res["topics"] && topic_res["topics"]["data"] && topic_res["mentions"]
+                  topic_info = topic_res["topics"]["data"].first
+                  arr_mentions_data = topic_res["mentions"]["data"]
 
-                # add this chunk's total count to totals count
-                topic_insight ||= {
-                  "count" => 0,
-                }
-                topic_insight["count"] += (chunk_total && chunk_total['count']).to_i
+                  if topic_info && arr_mentions_data && arr_mentions_data.length > 0
+                     # pop the "totals" for the time period
+                    chunk_total = arr_mentions_data.shift
 
-                # iterate breakdowns
-                arr_mentions_data.each do |insight|
-                  # insight => {"age_range"=>"13-17", "count"=>"180", "gender"=>"male"}
-                  # generate a set key composed of all breakdown values that this "count" is grouped by
-                  # ex: "13-17|male"
-                  breakdown_values = opts[:breakdown_by].map{|k| insight[k]}
-                  breakdown_key = Base64.encode64(Marshal.dump(breakdown_values)).chomp
-                  # add to existing total for this breakdown grouping
-                  breakdown_map[breakdown_key] ||= 0
-                  breakdown_map[breakdown_key] += insight["count"].to_i
+                    # add this chunk's total count to totals count
+                    topic_insight ||= {
+                      "name" => topic_info["name"],
+                      "count" => 0,
+                      "breakdown" => []
+                    }
+                    topic_insight["count"] += (chunk_total && chunk_total['count']).to_i
+
+                    # iterate breakdowns
+                    arr_mentions_data.each do |insight|
+                      # insight => {"age_range"=>"13-17", "count"=>"180", "gender"=>"male"}
+                      # generate a set key composed of all breakdown values that this "count" is grouped by
+                      # ex: "13-17|male"
+                      breakdown_values = opts[:breakdown_by].map{|k| insight[k]}
+                      breakdown_key = Base64.encode64(Marshal.dump(breakdown_values)).chomp
+                      # add to existing total for this breakdown grouping
+                      breakdown_map[breakdown_key] ||= 0
+                      breakdown_map[breakdown_key] += insight["count"].to_i
+                    end
+                  end
                 end
               end
             end
@@ -132,7 +142,6 @@ module Koala
             # set broken down count aggregated over request time window
             breakdown_entry["count"] = ct
             # add to response structure
-            topic_insight["breakdown"] ||= []
             topic_insight["breakdown"] << breakdown_entry
           end
 
@@ -207,7 +216,8 @@ module Koala
             # add to return structure
             counts_map[htag] = {
               "name" => htag_name,
-              "count" => hashtag_doc['count'].to_i
+              "count" => hashtag_doc['count'].to_i,
+              "breakdown" => []
             }
             # entity_id = (hashtag_doc['hashtag'] && hashtag_doc['hashtag']['id']).to_s
             # if entity_id.length > 0
