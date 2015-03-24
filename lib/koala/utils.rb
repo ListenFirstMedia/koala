@@ -38,7 +38,11 @@ module Koala
       hash.inject({}){ |memo,(key,value)| memo[key.to_sym] = symbolize_hash(value); memo }
     end
 
-    # TODO anything else to check for?
+    # Checks whether the argumnet is a hashtag
+    #
+    # @param arg [String] the string to check
+    # @return bool
+    #
     def is_hashtag?(arg)
       !!(arg && arg.start_with?('#'))
     end
