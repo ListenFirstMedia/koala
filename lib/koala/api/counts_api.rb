@@ -6,8 +6,6 @@ module Koala
 
     module CountsAPIMethods
 
-      # TODO return array with "query" attribute from argument
-
       # takes array of strings, each being either a topic id or a raw hashtag (with leading '#')
       # delegates to api method, returns merged result
       # TODO better name
