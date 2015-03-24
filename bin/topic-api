@@ -96,7 +96,7 @@ app_token = oauth.get_app_access_token
 client = Koala::Facebook::API.new(app_token)
 
 search_topic = options[:topic]
-search_results = client.topic_search(search_topic)
+search_results = client.search(search_topic, type: 'topic', fields: "id,name,page")
 
 if search_results.length == 0
   puts "No topic found for #{search_topic}"
@@ -127,7 +127,6 @@ breakdown_by = options[:breakdown_by].to_a.sort
 start_time = Time.parse(options[:since])
 end_time = Time.parse(options[:until])
 
-# TODO update with interface change
 topic_counts = client.topic_counts(
   topic['id'],
   start_time,
@@ -153,22 +152,21 @@ write_fn = proc { |f, topic_counts|
         ("http://www.facebook.com/#{topic['page']['id']}" rescue nil)
       ]
 
-      topic_counts.each do |topic_doc|
-        # 1 row for total count
-        row = []
-        breakdown_by.length.times { row << "" }
-        row << topic_doc['count']
-        csv << (base_row + row)
+      topic_doc = topic_counts[topic['id']]
+      # 1 row for total count
+      row = []
+      breakdown_by.length.times { row << "" }
+      row << topic_doc['count']
+      csv << (base_row + row)
 
-        # 1 row per breakdown grouping
-        topic_doc['breakdown'].each do |breakdown_doc|
-          row = []
-          breakdown_by.each do |header|
-            row << breakdown_doc[header]
-          end
-          row << breakdown_doc['count']
-          csv << (base_row + row)
+      # 1 row per breakdown grouping
+      topic_doc['breakdown'].to_a.each do |breakdown_doc|
+        row = []
+        breakdown_by.each do |header|
+          row << breakdown_doc[header]
         end
+        row << breakdown_doc['count']
+        csv << (base_row + row)
       end
     end
     f.puts output
