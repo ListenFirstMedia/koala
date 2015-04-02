@@ -125,8 +125,7 @@ else
 end
 
 
-puts "Requesting with topic:"
-puts JSON.pretty_generate(topic)
+puts "Requesting with topic: #{topic['name']} - #{topic['id']} - #{topic['page'] && topic['page']['category']} - http://www.facebook.com/#{topic['page'] && topic['page']['id']}"
 
 params = {}
 
@@ -148,7 +147,7 @@ write_fn = proc { |f, topic_counts|
   when 'tsv', 'csv'
     delim = options[:fmt] == 'csv' ? "," : "\t"
     output = CSV.generate(col_sep: delim) do |csv|
-      csv << (['start_time', 'end_time', 'topic_name'] + breakdown_by + ['count'])
+      csv << (['start_time', 'end_time', 'topic_name', 'topic_category', 'topic_page'] + breakdown_by + ['count'])
 
       # base output row
       base_row = [
@@ -160,6 +159,13 @@ write_fn = proc { |f, topic_counts|
         # 1 row for total count
         row = []
         row << topic_doc['name']
+        if topic['page']
+          row << topic['page']['topic_category']
+          row << "http://www.facebook.com/#{topic['page']['id']}"
+        else
+          row << ""
+          row << ""
+        end
         breakdown_by.length.times { row << "" }
         row << topic_doc['count']
         csv << (base_row + row)
