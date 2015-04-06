@@ -171,7 +171,7 @@ write_fn = proc { |f, topic_counts|
         csv << (base_row + row)
 
         # 1 row per breakdown grouping
-        topic_doc['breakdown'].to_a.each do |breakdown_doc|
+        topic_doc['breakdown_by'].to_a.each do |breakdown_doc|
           row = []
           breakdown_by.each do |header|
             row << breakdown_doc[header]

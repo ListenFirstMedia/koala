@@ -105,7 +105,7 @@ module Koala
                       "query" => topic_id,
                       "name" => topic_info["name"],
                       "count" => 0,
-                      "breakdown" => []
+                      "breakdown_by" => []
                     }
                     topic_insight["count"] += (chunk_total && chunk_total['count']).to_i
 
@@ -150,7 +150,7 @@ module Koala
             # set broken down count aggregated over request time window
             breakdown_entry["count"] = ct
             # add to response structure
-            topic_insight["breakdown"] << breakdown_entry
+            topic_insight["breakdown_by"] << breakdown_entry
           end
 
           if topic_insight
@@ -226,7 +226,7 @@ module Koala
               "query" => htag,
               "name" => htag_name,
               "count" => hashtag_doc['count'].to_i,
-              "breakdown" => []
+              "breakdown_by" => []
             }
             # entity_id = (hashtag_doc['hashtag'] && hashtag_doc['hashtag']['id']).to_s
             # if entity_id.length > 0

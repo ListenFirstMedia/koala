@@ -35,8 +35,8 @@ describe 'Koala::Facebook::CountsAPIMethods' do
       expect(t1['count']).to eq(6)
       expect(t2['count']).to eq(14)
 
-      gcount_m = t1['breakdown'].select { |h| h['gender'] == 'male' }.first
-      gcount_f = t1['breakdown'].select { |h| h['gender'] == 'female' }.first
+      gcount_m = t1['breakdown_by'].select { |h| h['gender'] == 'male' }.first
+      gcount_f = t1['breakdown_by'].select { |h| h['gender'] == 'female' }.first
 
       expect(gcount_m).not_to be_nil
       expect(gcount_f).not_to be_nil
