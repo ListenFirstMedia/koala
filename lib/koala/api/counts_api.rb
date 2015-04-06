@@ -103,7 +103,7 @@ module Koala
                     # add this chunk's total count to totals count
                     topic_insight ||= {
                       "query" => topic_id,
-                      "name" => (topic_info && topic_info["name"]),
+                      "name" => (topic_info && topic_info["name"]).to_s,
                       "count" => 0,
                       "breakdown_by" => []
                     }
