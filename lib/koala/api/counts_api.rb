@@ -92,18 +92,18 @@ module Koala
             # make request for this chunk of mentions counts
             get_object("topic_insights?#{topics_query_str}", request_params, {}) do |topics_res|
               topics_res.each do |topic_res|
-                if topic_res["topics"] && topic_res["topics"]["data"] && topic_res["mentions"]
-                  topic_info = topic_res["topics"]["data"].first
+                if topic_res["mentions"] && topic_res["mentions"]["data"]
+                  topic_info = (topic_res["topics"] && topic_res["topics"]["data"].first)
                   arr_mentions_data = topic_res["mentions"]["data"]
 
-                  if topic_info && arr_mentions_data && arr_mentions_data.length > 0
+                  if arr_mentions_data && arr_mentions_data.length > 0
                      # pop the "totals" for the time period
                     chunk_total = arr_mentions_data.shift
 
                     # add this chunk's total count to totals count
                     topic_insight ||= {
                       "query" => topic_id,
-                      "name" => topic_info["name"],
+                      "name" => (topic_info && topic_info["name"]),
                       "count" => 0,
                       "breakdown_by" => []
                     }
