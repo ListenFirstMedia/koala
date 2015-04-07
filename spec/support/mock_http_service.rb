@@ -96,7 +96,7 @@ module Koala
           # obviously there are no files in the yaml
           "[FILE]"
         else
-          v.to_s
+          v
         end
         # make sure all keys are strings
         hash.merge(k.to_s => value)

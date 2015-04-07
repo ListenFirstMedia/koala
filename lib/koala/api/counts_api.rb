@@ -87,7 +87,7 @@ module Koala
             end
             # update since and until request parameters
             request_params['fields'] =
-              "#{request_params['fields']}.since(#{min_time.to_i}).until(#{max_time.to_i})"
+              "#{request_params['fields']}.since(#{min_time.to_i.to_s}).until(#{max_time.to_i.to_s})"
 
             # make request for this chunk of mentions counts
             get_object("topic_insights?#{topics_query_str}", request_params, {}) do |topics_res|
@@ -202,8 +202,8 @@ module Koala
         # including here as part of the path with time args being included in params arg
         # (added to query string by library)
         params = {
-          "since" => start_ts,
-          "until" => end_ts
+          "since" => start_ts.to_s,
+          "until" => end_ts.to_s
         }
 
         # url encode each argument as part of query string params
