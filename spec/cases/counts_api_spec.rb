@@ -4,8 +4,8 @@ require 'time'
 describe 'Koala::Facebook::CountsAPIMethods' do
   include_context "Koala Graph API setup"
   before do
-    @start_time = Time.parse('2015-03-23T13:05:00')
-    @end_time = Time.parse('2015-03-23T23:05:00')
+    @start_time = 1427130300
+    @end_time = 1427166300
   end
 
   describe '#topic_counts' do
