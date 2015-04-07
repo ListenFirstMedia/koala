@@ -7,7 +7,7 @@ require 'koala'
 require 'time'
 require 'json'
 
-Koala.config.api_version = "v2.0"
+Koala.config.api_version = "v2.3"
 
 # get client auth from env
 client_id = ENV['FACEBOOK_CLIENT_ID']
