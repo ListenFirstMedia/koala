@@ -12,7 +12,9 @@ module Koala
       # and delegates to proper API endpoint for fetching data
       #
       # @param ids [Array<String>] array of hashtags or Topic Ids (ok to mix)
-      # see `topic_insights`
+      # @params opts Hash Options
+      # @option opts :mentions_since [Time,Fixnum] Window start (inclusive)
+      # @option opts :mentions_until [Time,Fixnum] Window end (exclusive)
       #
       # @return Array<Hash>
       # [
@@ -21,11 +23,10 @@ module Koala
       #     "breakdown": [{"gender":"male", "count": 101}, {...}]}
       # ]
       #
-      def topic_counts(ids, start_time, end_time, opts={})
+      def topic_counts(ids, opts={})
         ids = [ids].flatten
         hashtags, topic_ids = ids.partition { |id| Koala::Utils::is_hashtag?(id) }
-        hashtag_counts(hashtags, start_time, end_time, opts) +
-        topic_insights(topic_ids, start_time, end_time, opts)
+        hashtag_counts(hashtags, opts) + topic_insights(topic_ids, opts)
       end
 
       # https://developers.facebook.com/docs/topic_insights
@@ -45,7 +46,7 @@ module Koala
       # @raise [Koala::Facebook::APIError] if missing topic_id or rate limited
       # @return see `topic_counts`
       #
-      def topic_insights(topic_ids, start_time, end_time, opts={})
+      def topic_insights(topic_ids, opts={})
         return [] unless (topic_ids && topic_ids.length > 0)
         opts ||= {}
         topic_ids = [topic_ids].flatten
@@ -53,7 +54,7 @@ module Koala
         counts_arr = []
 
         # keep referance request max time
-        until_time = end_time
+        until_time = (opts[:mentions_until] || Time.now)
         # TODO max chunk size given current API constraints
         chunk = 21600
 
@@ -64,9 +65,9 @@ module Koala
 
         topic_ids.each do |topic_id|
           # start with request start time
-          min_time = start_time
+          min_time = (opts[:mentions_since] || (until_time - 3600))
           # initial max time of start + chunk, or full request time window (whichever is smaller)
-          max_time = [(start_time + chunk), until_time].min
+          max_time = [(min_time + chunk), until_time].min
           # map for aggregating fully broken down counts across request chunks
           breakdown_map = {}
 
@@ -165,12 +166,11 @@ module Koala
       # Return counts for a list of hashtags within a time window
       #
       # @param hashtags [Array<String>] array of hashtags (with leading '#')
-      # @param start_time [Time] Window start (inclusive)
-      # @param end_time [Time] Window end (exclusive)
-      # @param opts Options
+      # @param opts options
+      # @options se `topic_counts`
       # @return see `topic_counts`
       #
-      def hashtag_counts(hashtags, start_time, end_time, opts={})
+      def hashtag_counts(hashtags, opts={})
         return [] unless (hashtags && hashtags.length > 0)
         # NOTE: currently not used. offering same api as topic_counts
         opts ||= {}
@@ -194,8 +194,8 @@ module Koala
         # TODO API enforces times "line up evenly on 300 second intervals"
         # valid: 13:00:00, 13:05:00, 13:10:00, ...
         # do anything to the args?
-        start_ts = start_time.to_i
-        end_ts = end_time.to_i
+        start_ts = opts[:mentions_since] && opts[:mentions_since].to_i
+        end_ts = opts[:mentions_until] && opts[:mentions_until].to_i
 
         # NOTE: lib currently encodes array values into comma separated strings
         # however, this api endpoint needs arg "hashtags[]" in url query string

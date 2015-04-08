@@ -6,12 +6,12 @@ describe 'Koala::Facebook::CountsAPIMethods' do
   before do
     @start_time = 1427130300
     @end_time = 1427166300
+    @opts = {breakdown_by: ['gender'], mentions_since: @start_time, mentions_until: @end_time}
   end
 
   describe '#topic_counts' do
     it 'returns consistent structure' do
-      opts = {:breakdown_by => ['gender']}
-      topic_counts_result = @api.topic_counts(['1','#facebook'], @start_time, @end_time, opts)
+      topic_counts_result = @api.topic_counts(['1','#facebook'], @opts)
       expect(topic_counts_result).to be_an(Array)
       expect(topic_counts_result.length).to eq(2)
     end
@@ -19,8 +19,7 @@ describe 'Koala::Facebook::CountsAPIMethods' do
 
   describe '#topic_insights' do
     it 'chunks requests and returns an Array' do
-      opts = {:breakdown_by => ['gender']}
-      topic_insights_result = @api.topic_insights(['1','2'], @start_time, @end_time, opts)
+      topic_insights_result = @api.topic_insights(['1','2'], @opts)
       expect(topic_insights_result).not_to be_nil
       expect(topic_insights_result).to be_an(Array)
       expect(topic_insights_result.length).to eq(2)
@@ -50,7 +49,7 @@ describe 'Koala::Facebook::CountsAPIMethods' do
 
   describe '#hashtag_counts' do
     it 'returns an Array' do
-      hasthtag_counts_result = @api.hashtag_counts(['#facebook'], @start_time, @end_time)
+      hasthtag_counts_result = @api.hashtag_counts(['#facebook'], @opts)
       expect(hasthtag_counts_result).not_to be_nil
       expect(hasthtag_counts_result).to be_an(Array)
       expect(hasthtag_counts_result.length).to eq(1)
