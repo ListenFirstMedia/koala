@@ -14,7 +14,7 @@ module Koala
       # @param ids [Array<String>] array of hashtags or Topic Ids (ok to mix)
       # @params opts Hash Options
       # @option opts :mentions_since [Time,Fixnum] Window start (inclusive)
-      # @option opts :mentions_until [Time,Fixnum] Window end (exclusive)
+      # @option opts :mentions_until [Time,Fixnum] Window end (inclusive)
       #
       # @return Array<Hash>
       # [
