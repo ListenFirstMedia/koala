@@ -135,9 +135,9 @@ end_time = Time.parse(options[:until])
 
 topic_counts = client.topic_counts(
   topic['id'],
-  start_time,
-  end_time,
-  :breakdown_by => breakdown_by
+  mentions_since: start_time,
+  mentions_until: end_time,
+  breakdown_by: breakdown_by
 )
 
 fout = nil
