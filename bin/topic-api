@@ -114,6 +114,10 @@ if !is_htag
     str << "Which topic number?"
     puts str
     i = STDIN.gets.chomp.to_i
+    if i < 0
+      puts "No topic selected. Exiting"
+      exit 0
+    end
     topic = search_results[i]
   else
     topic = search_results[0]
@@ -147,7 +151,7 @@ write_fn = proc { |f, topic_counts|
   when 'tsv', 'csv'
     delim = options[:fmt] == 'csv' ? "," : "\t"
     output = CSV.generate(col_sep: delim) do |csv|
-      csv << (['start_time', 'end_time', 'topic_name', 'topic_category', 'topic_page'] + breakdown_by + ['count'])
+      # csv << (['start_time', 'end_time', 'topic_name', 'topic_category', 'topic_page'] + breakdown_by + ['count'])
 
       # base output row
       base_row = [
@@ -160,7 +164,7 @@ write_fn = proc { |f, topic_counts|
         row = []
         row << topic_doc['name']
         if topic['page']
-          row << topic['page']['topic_category']
+          row << topic['page']['category'].to_s
           row << "http://www.facebook.com/#{topic['page']['id']}"
         else
           row << ""
