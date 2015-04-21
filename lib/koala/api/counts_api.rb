@@ -127,8 +127,8 @@ module Koala
             end
 
             # update chunking parameters
-            min_time = max_time
-            max_time = [(max_time += chunk), until_time].min
+            min_time = max_time + 1
+            max_time = [(min_time + chunk - 1), until_time].min
           end
           # key contains all breakdown vlaues
           # value is the summed count for the requested period
