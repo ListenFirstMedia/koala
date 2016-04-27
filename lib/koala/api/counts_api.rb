@@ -12,9 +12,9 @@ module Koala
       # and delegates to proper API endpoint for fetching data
       #
       # @param ids [Array<String>] array of hashtags or Topic Ids (ok to mix)
-      # @params opts Hash Options
-      # @option opts :mentions_since [Time,Fixnum] Window start (inclusive)
-      # @option opts :mentions_until [Time,Fixnum] Window end (inclusive)
+      # @params args Hash Options
+      # @option args :mentions_since [Time,Fixnum] Window start (inclusive)
+      # @option args :mentions_until [Time,Fixnum] Window end (inclusive)
       #
       # @return Array<Hash>
       # [
@@ -23,10 +23,10 @@ module Koala
       #     "breakdown": [{"gender":"male", "count": 101}, {...}]}
       # ]
       #
-      def topic_counts(ids, opts={})
+      def topic_counts(ids, args={})
         ids = [ids].flatten
         hashtags, topic_ids = ids.partition { |id| Koala::Utils::is_hashtag?(id) }
-        hashtag_counts(hashtags, opts) + topic_insights(topic_ids, opts)
+        hashtag_counts(hashtags, args) + topic_insights(topic_ids, args)
       end
 
       # https://developers.facebook.com/docs/topic_insights
@@ -41,20 +41,21 @@ module Koala
       # @param topic_ids [String, Array<String>] Facebook Topic IDs (use `topic_search`)
       # @param start_time [Time] Window start (inclusive)
       # @param end_time [Time] Window end (exclusive)
-      # @param opts Options
-      #   @option opts :breakdown_by [Array<String>] Dimensions to break down mention counts by
+      # @param args Options
+      #   @option args :breakdown_by [Array<String>] Dimensions to break down mention counts by
+      # @param opts (see Koala::Facebook::API#api)
       # @raise [Koala::Facebook::APIError] if missing topic_id or rate limited
       # @return see `topic_counts`
       #
-      def topic_insights(topic_ids, opts={})
+      def topic_insights(topic_ids, args={}, opts={})
         return [] unless (topic_ids && topic_ids.length > 0)
-        opts ||= {}
+        args ||= {}
         topic_ids = [topic_ids].flatten
 
         counts_arr = []
 
         # keep referance request max time
-        until_time = (opts[:mentions_until] || Time.now)
+        until_time = (args[:mentions_until] || Time.now)
         # TODO max chunk size given current API constraints
         chunk = 21600
 
@@ -65,7 +66,7 @@ module Koala
 
         topic_ids.each do |topic_id|
           # start with request start time
-          min_time = (opts[:mentions_since] || (until_time - 3600))
+          min_time = (args[:mentions_since] || (until_time - 3600))
           # initial max time of start + chunk, or full request time window (whichever is smaller)
           max_time = [(min_time + chunk), until_time].min
           # map for aggregating fully broken down counts across request chunks
@@ -82,16 +83,16 @@ module Koala
               "fields" => "topics,mentions"
             }
             # update fields with breakdown_by argument if provided
-            if !(opts[:breakdown_by].nil?) && opts[:breakdown_by].length > 0
+            if !(args[:breakdown_by].nil?) && args[:breakdown_by].length > 0
               request_params["fields"] =
-                "#{request_params["fields"]}.breakdown_by(#{opts[:breakdown_by].to_s})"
+                "#{request_params["fields"]}.breakdown_by(#{args[:breakdown_by].to_s})"
             end
             # update since and until request parameters
             request_params['fields'] =
               "#{request_params['fields']}.since(#{min_time.to_i.to_s}).until(#{max_time.to_i.to_s})"
 
             # make request for this chunk of mentions counts
-            get_object("topic_insights?#{topics_query_str}", request_params, {}) do |topics_res|
+            get_object("topic_insights?#{topics_query_str}", request_params, opts) do |topics_res|
               topics_res.each do |topic_res|
                 if topic_res["mentions"] && topic_res["mentions"]["data"]
                   topic_info = (topic_res["topics"] && topic_res["topics"]["data"].first)
@@ -115,7 +116,7 @@ module Koala
                       # insight => {"age_range"=>"13-17", "count"=>"180", "gender"=>"male"}
                       # generate a set key composed of all breakdown values that this "count" is grouped by
                       # ex: "13-17|male"
-                      breakdown_values = opts[:breakdown_by].map{|k| insight[k]}
+                      breakdown_values = args[:breakdown_by].map{|k| insight[k]}
                       breakdown_key = Base64.encode64(Marshal.dump(breakdown_values)).chomp
                       # add to existing total for this breakdown grouping
                       breakdown_map[breakdown_key] ||= 0
@@ -145,7 +146,7 @@ module Koala
               if breakdown_value.to_s.length > 0
                 # set breakdown value for breakdown key for this entry
                 # breakdown_entry["gender"] => "male"
-                breakdown_entry[opts[:breakdown_by][idx]] = breakdown_value
+                breakdown_entry[args[:breakdown_by][idx]] = breakdown_value
               end
             end
             # set broken down count aggregated over request time window
@@ -166,14 +167,15 @@ module Koala
       # Return counts for a list of hashtags within a time window
       #
       # @param hashtags [Array<String>] array of hashtags (with leading '#')
-      # @param opts options
-      # @options se `topic_counts`
+      # @param args options
+      # @options see `topic_counts`
+      # @param opts (see Koala::Facebook::API#api)
       # @return see `topic_counts`
       #
-      def hashtag_counts(hashtags, opts={})
+      def hashtag_counts(hashtags, args={}, opts={})
         return [] unless (hashtags && hashtags.length > 0)
         # NOTE: currently not used. offering same api as topic_counts
-        opts ||= {}
+        args ||= {}
         hashtags = [hashtags].flatten
         # init a mapping from request argument to a normalized version
         # {"abc": "#Abc"}
@@ -194,8 +196,8 @@ module Koala
         # TODO API enforces times "line up evenly on 300 second intervals"
         # valid: 13:00:00, 13:05:00, 13:10:00, ...
         # do anything to the args?
-        start_ts = opts[:mentions_since] && opts[:mentions_since].to_i
-        end_ts = opts[:mentions_until] && opts[:mentions_until].to_i
+        start_ts = args[:mentions_since] && args[:mentions_since].to_i
+        end_ts = args[:mentions_until] && args[:mentions_until].to_i
 
         # NOTE: lib currently encodes array values into comma separated strings
         # however, this api endpoint needs arg "hashtags[]" in url query string
@@ -213,7 +215,7 @@ module Koala
 
         # make request for hashtag counts
         # block is called with response object that would have been returned by `get_object` call
-        get_object("hashtag_counts?#{hashtags_query_str}", params, {}) do |hashtags_res|
+        get_object("hashtag_counts?#{hashtags_query_str}", params, opts) do |hashtags_res|
           # iterate response Array
           # [{"count"=>"2147", "hashtag"=>{"id"=>"351255261652168", "name"=>"#MLB"}}, ...]
           hashtags_res.each do |hashtag_doc|
