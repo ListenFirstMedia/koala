@@ -197,7 +197,7 @@ module Koala
       # @return the application access token
       def get_app_access_token(options = {})
         if info = get_app_access_token_info(options)
-          string = info["access_token"]
+          info["access_token"]
         end
       end
 
@@ -261,7 +261,7 @@ module Koala
 
       def parse_access_token(response_text)
         MultiJson.load(response_text)
-      rescue MultiJson::ParseError
+      rescue MultiJson::LoadError
         response_text.split("&").inject({}) do |hash, bit|
           key, value = bit.split("=")
           hash.merge!(key => value)

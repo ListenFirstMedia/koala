@@ -1,3 +1,56 @@
+v2.4.0
+======
+
+Updated features:
+
+* Batch API requests will now properly calculate appsecret_proofs for multiple access tokens
+  (thanks, mwpastore!)
+
+Internal improvements:
+
+* Koala now explicitly depends on MultiJson >= 1.3.0, since it uses methods introduced in that
+  version
+
+
+v2.3.0
+======
+
+Updated features:
+
+* API#get_user_picture_data is now API#get_picture_data. The old method and API#get_picture both
+  remain with deprecation warnings. (Thanks noahsilas for earlier work on this!)
+* Koala::Facebook::APIError now includes [debug and trace
+  info](https://github.com/arsduo/koala/blob/master/lib/koala/errors.rb) provided by Facebook in the headers
+  (thanks, @elhu!)
+
+Internal Improvements:
+
+* Graph API error handling is now done via the GraphErrorChecker class
+
+Testing improvements:
+
+* Upgraded RSpec to 3.3.0
+* Removed pended specs that were no longer relevant
+* Improved https regex in test suite (thanks, lucaskds!)
+
+v2.2.0
+======
+
+Updated features:
+
+* Restore API#search, since Facebook still supports that for certain usecases (thanks, vhoof!)
+* You can now specify format: :json in http_options to make Content-Type application/json requests (thanks, adparlor!)
+* Koala now supports uploading videos by URL (thanks, filipegiusti!)
+* GraphCollections now offer direct access to the collection summary data via #summary (thanks, vhoof!)
+
+Internal Improvements:
+
+* Use MultiJson::LoadError instead of the newer ParseError for backward compatibility (thanks, bunshin!)
+
+Documentation improvements:
+
+* modernize the hash syntax in the readme (thanks, st0012!)
+
 v2.1.0
 ======
 

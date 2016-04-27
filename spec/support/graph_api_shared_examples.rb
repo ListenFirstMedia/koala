@@ -51,6 +51,12 @@ shared_examples_for "Koala GraphAPI" do
     end
   end
 
+  # SEARCH
+  it "can search" do
+    result = @api.search("facebook")
+    expect(result.length).to be_an(Integer)
+  end
+
   # DATA
   # access public info
 
@@ -84,11 +90,11 @@ shared_examples_for "Koala GraphAPI" do
 
   describe "#get_picture" do
     it "can access a user's picture" do
-      expect(@api.get_picture(KoalaTest.user2)).to match(/http[s]*\:\/\//)
+      expect(@api.get_picture(KoalaTest.user2)).to match(/https?\:\/\//)
     end
 
     it "can access a user's picture, given a picture type"  do
-      expect(@api.get_picture(KoalaTest.user2, {:type => 'large'})).to match(/^http[s]*\:\/\//)
+      expect(@api.get_picture(KoalaTest.user2, {:type => 'large'})).to match(/^https?\:\/\//)
     end
 
     it "works even if Facebook returns nil" do
@@ -97,9 +103,24 @@ shared_examples_for "Koala GraphAPI" do
     end
   end
 
-  it "can access a user's picture data" do
-    result = @api.get_user_picture_data(KoalaTest.user2)
-    expect(result.key?("is_silhouette")).to be_truthy
+  describe "#get_picture_data" do
+    it "can access a user's picture data" do
+      result = @api.get_picture_data(KoalaTest.user2)
+      expect(result).to be_kind_of(Hash)
+      expect(result["data"]).to be_kind_of(Hash)
+      expect(result['data']).to be_truthy
+      expect(result['data'].keys).to include('is_silhouette', 'url')
+    end
+  end
+
+  describe "#get_user_picture_data" do
+    it "can access a user's picture data" do
+      result = @api.get_picture_data(KoalaTest.user2)
+      expect(result).to be_kind_of(Hash)
+      expect(result["data"]).to be_kind_of(Hash)
+      expect(result['data']).to be_truthy
+      expect(result['data'].keys).to include('is_silhouette', 'url')
+    end
   end
 
   it "can access connections from public Pages" do
@@ -115,6 +136,12 @@ shared_examples_for "Koala GraphAPI" do
   it "can access comments for 2 URLs" do
     result = @api.get_comments_for_urls(["http://developers.facebook.com/blog/post/490", "http://developers.facebook.com/blog/post/472"])
     expect(result["http://developers.facebook.com/blog/post/490"] && result["http://developers.facebook.com/blog/post/472"]).to be_truthy
+  end
+
+  # SEARCH
+  it "can search" do
+    result = @api.search("facebook")
+    expect(result.length).to be_an(Integer)
   end
 
   # PAGING THROUGH COLLECTIONS
@@ -358,6 +385,25 @@ shared_examples_for "Koala GraphAPI with an access token" do
     # note: Facebook doesn't post videos immediately to the wall, due to processing time
     # during which get_object(video_id) will return false
     # hence we can't do the same verify test we do for photos
+
+
+    describe "using a URL instead of a file" do
+      before :each do
+        @url = "http://techslides.com/demos/sample-videos/small.mp4"
+      end
+
+      it "can post photo to the user's wall using a URL" do
+        result = @api.put_video(@url)
+        @temporary_object_id = result["id"]
+        expect(@temporary_object_id).not_to be_nil
+      end
+
+      it "can post photo to the user's wall using a URL and an additional param" do
+        result = @api.put_video(@url, :description => "my message")
+        @temporary_object_id = result["id"]
+        expect(@temporary_object_id).not_to be_nil
+      end
+    end
   end
 
   it "can verify a message with an attachment posted to a feed" do
@@ -515,6 +561,7 @@ shared_examples_for "Koala GraphAPI with an access token" do
       :put_wall_post => 4,
       :put_comment => 3,
       :put_like => 2, :delete_like => 2,
+      :search => 3,
       :set_app_restrictions => 4,
       :get_page_access_token => 3,
       :fql_query => 3, :fql_multiquery => 3,
@@ -563,10 +610,26 @@ shared_examples_for "Koala GraphAPI with GraphCollection" do
       expect(@api.get_connections(KoalaTest.page, "photos")).to be_nil
     end
 
+    it "gets a GraphCollection when searching" do
+      result = @api.search("facebook")
+      expect(result).to be_a(Koala::Facebook::GraphCollection)
+    end
+
+    it "returns nil if the search call fails with nil" do
+      # this happens sometimes
+      expect(@api).to receive(:graph_call).and_return(nil)
+      expect(@api.search("facebook")).to be_nil
+    end
+
+    it "gets a GraphCollection when paging through results" do
+      @results = @api.get_page(["search", {"q"=>"facebook", "limit"=>"25", "until"=> KoalaTest.search_time}])
+      expect(@results).to be_a(Koala::Facebook::GraphCollection)
+    end
+
     it "returns nil if the page call fails with nil" do
       # this happens sometimes
       expect(@api).to receive(:graph_call).and_return(nil)
-      expect(@api.get_connections(KoalaTest.page, "photos")).to be_nil
+      expect(@api.get_page(["search", {"q"=>"facebook", "limit"=>"25", "until"=> KoalaTest.search_time}])).to be_nil
     end
   end
 end

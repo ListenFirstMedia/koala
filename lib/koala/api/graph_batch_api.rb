@@ -22,7 +22,7 @@ module Koala
         # normalize options for consistency
         options = Koala::Utils.symbolize_hash(options)
 
-        # for batch APIs, we queue up the call details (incl. post-processing)        
+        # for batch APIs, we queue up the call details (incl. post-processing)
         batch_calls << BatchOperation.new(
           :url => path,
           :args => args,
@@ -46,7 +46,7 @@ module Koala
         args = {}
         args["batch"] = MultiJson.dump(batch_calls.map { |batch_op|
           args.merge!(batch_op.files) if batch_op.files
-          batch_op.to_batch_params(access_token)
+          batch_op.to_batch_params(access_token, app_secret)
         })
 
         batch_result = graph_call_outside_batch('/', args, 'post', http_options) do |response|
@@ -65,7 +65,13 @@ module Koala
 
             raw_result = nil
             if call_result
-              if ( error = check_response(call_result['code'], call_result['body'].to_s) )
+              parsed_headers = if call_result.has_key?('headers')
+                call_result['headers'].inject({}) { |headers, h| headers[h['name']] = h['value']; headers}
+              else
+                {}
+              end
+
+              if (error = check_response(call_result['code'], call_result['body'].to_s, parsed_headers))
                 raw_result = error
               else
                 # (see note in regular api method about JSON parsing)
@@ -77,7 +83,7 @@ module Koala
                   call_result["code"].to_i
                 when :headers
                   # facebook returns the headers as an array of k/v pairs, but we want a regular hash
-                  call_result['headers'].inject({}) { |headers, h| headers[h['name']] = h['value']; headers}
+                  parsed_headers
                 else
                   body
                 end

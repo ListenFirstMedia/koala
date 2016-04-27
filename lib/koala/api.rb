@@ -39,6 +39,10 @@ module Koala
       # @param options request-related options for Koala and Faraday.
       #                See https://github.com/arsduo/koala/wiki/HTTP-Services for additional options.
       # @option options [Symbol] :http_component which part of the response (headers, body, or status) to return
+      # @option options [Symbol] :format which request format to use. Currently, :json is supported
+      # @option options [Symbol] :preserve_form_arguments preserve arrays in arguments, which are
+      #                          expected by certain FB APIs (see the ads API in particular,
+      #                          https://developers.facebook.com/docs/marketing-api/adgroup/v2.4)
       # @option options [Boolean] :beta use Facebook's beta tier
       # @option options [Boolean] :use_ssl force SSL for this request, even if it's tokenless.
       #                                    (All API requests with access tokens use SSL.)
@@ -63,7 +67,7 @@ module Koala
         end
 
         # Translate any arrays in the params into comma-separated strings
-        args = sanitize_request_parameters(args)
+        args = sanitize_request_parameters(args) unless preserve_form_arguments?(options)
 
         # add a leading / if needed...
         path = "/#{path}" unless path =~ /^\//
@@ -106,6 +110,10 @@ module Koala
           end
           result.merge(key => value)
         end
+      end
+
+      def preserve_form_arguments?(options)
+        options[:format] == :json || options[:preserve_form_arguments] || Koala.config.preserve_form_arguments
       end
     end
   end

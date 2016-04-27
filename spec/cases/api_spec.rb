@@ -75,9 +75,29 @@ describe "Koala::Facebook::API" do
     expect(@service.api('anything', {}, 'get', :http_component => http_component)).to eq(response)
   end
 
-  it "turns arrays of non-enumerables into comma-separated arguments" do
+  it "turns arrays of non-enumerables into comma-separated arguments by default" do
     args = [12345, {:foo => [1, 2, "3", :four]}]
     expected = ["/12345", {:foo => "1,2,3,four"}, "get", {}]
+    response = double('Mock KoalaResponse', :body => '', :status => 200)
+    expect(Koala).to receive(:make_request).with(*expected).and_return(response)
+    @service.api(*args)
+  end
+
+  it "can be configured to leave arrays of non-enumerables as is" do
+    Koala.configure do |config|
+      config.preserve_form_arguments = true
+    end
+
+    args = [12345, {:foo => [1, 2, "3", :four]}]
+    expected = ["/12345", {:foo => [1, 2, "3", :four]}, "get", {}]
+    response = double('Mock KoalaResponse', :body => '', :status => 200)
+    expect(Koala).to receive(:make_request).with(*expected).and_return(response)
+    @service.api(*args)
+  end
+
+  it "can be configured on a per-request basis to leave arrays as is" do
+    args = [12345, {foo: [1, 2, "3", :four]}, "get", preserve_form_arguments: true]
+    expected = ["/12345", {foo: [1, 2, "3", :four]}, "get", preserve_form_arguments: true]
     response = double('Mock KoalaResponse', :body => '', :status => 200)
     expect(Koala).to receive(:make_request).with(*expected).and_return(response)
     @service.api(*args)
@@ -90,6 +110,14 @@ describe "Koala::Facebook::API" do
     # (if appropriate behavior is defined)
     # or raise an exception
     expected = ["/12345", params, "get", {}]
+    response = double('Mock KoalaResponse', :body => '', :status => 200)
+    expect(Koala).to receive(:make_request).with(*expected).and_return(response)
+    @service.api(*args)
+  end
+
+  it "doesn't modify any data if the option format of :json is provided" do
+    args = [12345, {:foo => [1, 2, "3", :four]}, 'get', format: :json]
+    expected = ["/12345", {:foo => [1, 2, "3", :four]}, 'get', format: :json]
     response = double('Mock KoalaResponse', :body => '', :status => 200)
     expect(Koala).to receive(:make_request).with(*expected).and_return(response)
     @service.api(*args)

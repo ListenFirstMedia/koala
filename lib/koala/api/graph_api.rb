@@ -2,6 +2,7 @@ require 'addressable/uri'
 
 require 'koala/api/graph_collection'
 require 'koala/http_service/uploadable_io'
+require 'koala/api/graph_error_checker'
 
 module Koala
   module Facebook
@@ -164,9 +165,10 @@ module Koala
         graph_call("#{id}/#{connection_name}", args, "delete", options, &block)
       end
 
-      # Fetches a photo.
-      # (Facebook returns the src of the photo as a response header; this method parses that properly,
-      # unlike using get_connections("photo").)
+      # Fetches a photo url.
+      # Note that this method returns the picture url, not the full API
+      # response. For the hash containing the full metadata for the photo, use
+      # #get_user_picture_data instead.
       #
       # @param options options for Facebook (see #get_object).
       #                        To get a different size photo, pass :type => size (small, normal, large, square).
@@ -176,22 +178,34 @@ module Koala
       #
       # @return the URL to the image
       def get_picture(object, args = {}, options = {}, &block)
-        # Gets a picture object, returning the URL (which Facebook sends as a header)
-        graph_call("#{object}/picture", args, "get", options.merge(:http_component => :headers)) do |result|
-          resolved_result = result ? result["Location"] : nil
-          block ? block.call(resolved_result) : resolved_result
+        Koala::Utils.deprecate("API#get_picture will be removed in a future version. Please use API#get_picture_data, which returns a hash including the url.")
+
+        get_user_picture_data(object, args, options) do |result|
+          # Try to extract the URL
+          result = result.fetch('data', {})['url'] if result.respond_to?(:fetch)
+          block ? block.call(result) : result
         end
       end
 
-      # Fetches a photo data.
+      # Fetches a photo data hash.
       #
       # @param args (see #get_object)
       # @param options (see Koala::Facebook::API#api)
       # @param block (see Koala::Facebook::API#api)
       #
       # @return a hash of object data
-      def get_user_picture_data(object, args = {}, options = {}, &block)
-        graph_call("#{object}/picture", args.merge(:redirect => false), "get", options, &block)
+      def get_picture_data(object, args = {}, options = {}, &block)
+        # The default response for a Graph API query like GET /me/picture is to
+        # return a 302 redirect. This is a surprising difference from the
+        # common return type, so we add the `redirect: false` parameter to get
+        # a RESTful API response instead.
+        args = args.merge(:redirect => false)
+        graph_call("#{object}/picture", args, "get", options, &block)
+      end
+
+      def get_user_picture_data(*args, &block)
+        Koala::Utils.deprecate("API#get_user_picture_data is deprecated and will be removed in a future version. Please use API#get_picture_data, which has the same signature.")
+        get_picture_data(*args, &block)
       end
 
       # Upload a photo.
@@ -222,7 +236,8 @@ module Koala
         put_connections(*parse_media_args(picture_args, "photos"), &block)
       end
 
-      # Upload a video.  Functions exactly the same as put_picture.
+      # Upload a video.  Functions exactly the same as put_picture (URLs supported as of Facebook
+      # API version 2.3).
       # @see #put_picture
       def put_video(*video_args, &block)
         args = parse_media_args(video_args, "videos")
@@ -510,7 +525,7 @@ module Koala
         # enable appsecret_proof by default
         options = {:appsecret_proof => true}.merge(options) if @app_secret
         result = api(path, args, verb, options) do |response|
-          error = check_response(response.status, response.body)
+          error = check_response(response.status, response.body, response.headers)
           raise error if error
         end
 
@@ -523,39 +538,8 @@ module Koala
 
       private
 
-      def check_response(http_status, response_body)
-        # Check for Graph API-specific errors. This returns an error of the appropriate type
-        # which is immediately raised (non-batch) or added to the list of batch results (batch)
-        http_status = http_status.to_i
-
-        if http_status >= 400
-          begin
-            response_hash = MultiJson.load(response_body)
-          rescue MultiJson::DecodeError
-            response_hash = {}
-          end
-
-          if response_hash['error_code']
-            # Old batch api error format. This can be removed on July 5, 2012.
-            # See https://developers.facebook.com/roadmap/#graph-batch-api-exception-format
-            error_info = {
-              'code' => response_hash['error_code'],
-              'message' => response_hash['error_description']
-            }
-          else
-            error_info = response_hash['error'] || {}
-          end
-
-          if error_info['type'] == 'OAuthException' &&
-             ( !error_info['code'] || [102, 190, 450, 452, 2500].include?(error_info['code'].to_i))
-
-            # See: https://developers.facebook.com/docs/authentication/access-token-expiration/
-            #      https://developers.facebook.com/bugs/319643234746794?browse=search_4fa075c0bd9117b20604672
-            AuthenticationError.new(http_status, response_body, error_info)
-          else
-            ClientError.new(http_status, response_body, error_info)
-          end
-        end
+      def check_response(http_status, body, headers)
+        GraphErrorChecker.new(http_status, body, headers).error_if_appropriate
       end
 
       def parse_media_args(media_args, method)
@@ -571,7 +555,9 @@ module Koala
 
         if url?(media_args.first)
           # If media_args is a URL, we can upload without UploadableIO
-          args.merge!(:url => media_args.first)
+          # Video: https://developers.facebook.com/docs/graph-api/video-uploads
+          fb_expected_arg_name = method == "photos" ? :url : :file_url
+          args.merge!(fb_expected_arg_name => media_args.first)
         else
           args["source"] = Koala::UploadableIO.new(*media_args.slice(0, 1 + args_offset))
         end
